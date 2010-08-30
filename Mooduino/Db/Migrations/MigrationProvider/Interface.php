@@ -1,5 +1,5 @@
 <?php
-interface Mooduino_Db_Migrations_ProviderInterface {
+interface Mooduino_Db_Migrations_MigrationProvider_Interface {
 	public function generate($name, $env='development');
 	public function redo($step=1, $env='development');
 	public function current($env='development');

@@ -1,18 +1,18 @@
 <?php
 
-require_once 'Mooduino/Db/Migrations/ProviderInterface.php';
+require_once 'Mooduino/Db/Migrations/MigrationProvider/Interface.php';
 require_once 'Mooduino/Db/Migrations/Migration.php';
 require_once 'Mooduino/Db/Migrations/Migration/Abstract.php';
 require_once 'Mooduino/Db/Migrations/MigrationManager.php';
 
-class Mooduino_Db_Migrations_MigrationProvider implements Mooduino_Db_Migrations_ProviderInterface, Zend_Tool_Framework_Provider_Interface {
+class Mooduino_Db_Migrations_MigrationProvider extends Zend_Tool_Framework_Provider_Abstract implements Mooduino_Db_Migrations_MigrationProvider_Interface {
 
 	public function getName() {
 		return 'Migration';
 	}
 
 	public function generate($name, $env='development') {
-		printf('Hello %s!', $name);
+		$this->_registry->getResponse()->appendContent(sprintf('Generating migration %s.', $name));
 	}
 
 	public function redo($step=1, $env='development') {
