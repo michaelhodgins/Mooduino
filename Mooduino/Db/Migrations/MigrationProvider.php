@@ -1,6 +1,9 @@
 <?php
 
 require_once 'Mooduino/Db/Migrations/ProviderInterface.php';
+require_once 'Mooduino/Db/Migrations/Migration.php';
+require_once 'Mooduino/Db/Migrations/Migration/Abstract.php';
+require_once 'Mooduino/Db/Migrations/MigrationManager.php';
 
 class Mooduino_Db_Migrations_MigrationProvider implements Mooduino_Db_Migrations_ProviderInterface, Zend_Tool_Framework_Provider_Interface {
 
@@ -24,7 +27,7 @@ class Mooduino_Db_Migrations_MigrationProvider implements Mooduino_Db_Migrations
 
 	}
 
-	public function show($env='development') {
+	public function show($revision='all', $env='development') {
 
 	}
 }
