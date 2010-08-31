@@ -43,7 +43,14 @@ class Mooduino_Db_Migrations_MigrationProvider extends Zend_Tool_Project_Provide
 
     public function show($revision='all', $env='development') {
         $this->init($env);
+        if ($revision == 'all') {
+        	$migrations = $this->manager->listMigrations();
+        	foreach($migrations as $migration) {
+        		$this->_registry->getResponse()->appendContent($migration->getName());
+        	}
+        } else {
         
+        }
     }
 
     private function init($env) {

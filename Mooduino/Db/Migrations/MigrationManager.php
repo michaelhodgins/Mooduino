@@ -12,7 +12,7 @@ class Mooduino_Db_Migrations_MigrationManager {
      */
     public function __construct($directory, Zend_Db_Adapter_Abstract $dbAdapter) {
         $this->directory = $directory;
-        echo $this->directory;
+        //echo $this->directory;
         $this->dbAdapter = $dbAdapter;
         if (!is_dir($this->directory)) {
         	throw new Exception('migration directory must exist');
@@ -46,9 +46,29 @@ class Mooduino_Db_Migrations_MigrationManager {
         fclose($fpointer);
     }
     
+    public function listMigrations() {
+    	$migrations = array();
+    	$files = scandir($this->directory);
+    	foreach($files as $file) {
+    		if (is_file($this->migrationFilePath($file)) && $file[strlen($file)-1] != '~') {
+    			include_once $this->migrationFilePath($file);
+    			$klass = $this->migrationClass($file);
+    			$migrations[] = new $klass();
+    		}
+    	}
+    	return $migrations;
+    }
+    
     public function validateMigrationName($name) {
-    	return true;
+    	return preg_match('/^[a-zA-Z]+[a-zA-Z0-9]*/', $name) == 1;
 	}
 
+	private function migrationFilePath($file) {
+		return $this->directory.'/'.$file;
+	}
+	
+	private function migrationClass($file) {
+		return 'Migration_'.substr($file, 0, strlen($file)-4);
+	}
 }
 
