@@ -19,6 +19,11 @@ class Mooduino_Db_Migrations_MigrationProvider extends Zend_Tool_Project_Provide
     public function generate($name, $env='development') {
         $this->init($env);
         $this->_registry->getResponse()->appendContent(sprintf('Generating migration %s.', $name));
+        try {
+	        $this->manager->generateMigration($name);
+        } catch(Exception $e) {
+        	$this->_registry->getResponse()->appendContent($e->getMessage());
+        }
     }
 
     public function redo($step=1, $env='development') {
@@ -42,7 +47,17 @@ class Mooduino_Db_Migrations_MigrationProvider extends Zend_Tool_Project_Provide
     }
 
     private function init($env) {
-        $this->manager = new Mooduino_Db_Migrations_MigrationManager('./scripts/migrations', $this->getDbAdapter($env));
+    	$path = realpath('./scripts/migrations');
+    	if ($path === false) {
+    		mkdir('./scripts/migrations', 0777, true);
+	    	$path = realpath('./scripts/migrations');
+	    	if ($path === false) {
+	    		throw new Exception('Couldn\'t create the migration directory');
+	    	}
+    	}
+//    	print_r($path);
+        $this->manager = new Mooduino_Db_Migrations_MigrationManager($path, $this->getDbAdapter($env));
+//		print_r($this->manager);
     }
 
     private function getProfile() {
