@@ -1,28 +1,23 @@
 <?php
+
 class Mooduino_Db_Migrations_MigrationManager {
 
-	/**
-	 * @var Mooduino_Db_Migrations_MigrationManager
-	 */
-	private static $instance = null;
+    private $directory;
+    private $dbAdapter;
+    /**
+     * Constructs the MigrationManager. This is private
+     * as MigrationManager is a singleton.
+     * @param string $directory the directory that migration files are stored in
+     * @param Zend_Db_Adapter_Abstract $dbAdapter the database connection
+     */
+    public function __constructor($directory, Zend_Db_Adapter_Abstract $dbAdapter) {
+        $this->directory = $directory;
+        $this->dbAdapter = $dbAdapter;
+    }
 
-	/**
-	 * Constructs the MigrationManager. This is private
-	 * as MigrationManager is a singleton.
-	 */
-	private function __constructor() {
+    public function generateMigration($name) {
+        
+    }
 
-	}
-	
-	/**
-	 * Returns the MigrationManager singleton.
-	 * @return Mooduino_Db_Migrations_MigrationManager
-	 */
-	public static function getInstance() {
-		if (is_null(self::$instance)) {
-			self::$instance = new Mooduino_Db_Migrations_MigrationManager();
-		}
-		return self::$instance;
-	}
 }
 
