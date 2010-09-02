@@ -25,7 +25,7 @@ class Mooduino_Db_Migrations_MigrationManager {
         }
     }
 
-    public function generateMigration($name) {
+    public function generateMigration($name, $baseClass=null) {
     	if (!$this->validateMigrationName($name)) {
     		throw new Exception('Check the migration name');
     	}
@@ -47,6 +47,7 @@ class Mooduino_Db_Migrations_MigrationManager {
     }
     
     public function listMigrations() {
+    	$this->checkSchemaTable();
     	$migrations = array();
     	$files = scandir($this->directory);
     	foreach($files as $file) {
@@ -61,6 +62,31 @@ class Mooduino_Db_Migrations_MigrationManager {
     
     public function validateMigrationName($name) {
     	return preg_match('/^[a-zA-Z]+[a-zA-Z0-9]*/', $name) == 1;
+	}
+	
+	private function checkSchemaTable() {
+		$tables = $this->dbAdapter->query('SHOW TABLES;');
+		$tableFound = false;
+		foreach($tables as $table) {
+			$name = array_pop($table);
+			if ($name == 'schema_version') {
+				$tableFound = true;
+				break;
+			}
+		}
+		if (!$tableFound) {
+			$this->createSchemaTable();
+		}
+	}
+	
+	private function createSchemaTable() {
+		$this->dbAdapter->query(
+			'CREATE TABLE `schema_version` (
+				`id` BIGINT NOT NULL AUTO_INCREMENT,
+				`version` BIGINT NOT NULL,
+				PRIMARY KEY (`id`)
+			)'
+		);
 	}
 
 	private function migrationFilePath($file) {

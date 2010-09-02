@@ -16,11 +16,11 @@ class Mooduino_Db_Migrations_MigrationProvider extends Zend_Tool_Project_Provide
         return 'Migration';
     }
 
-    public function generate($name, $env='development') {
+    public function generate($name, $env='development', $baseClass = 'default') {
         $this->init($env);
         $this->_registry->getResponse()->appendContent(sprintf('Generating migration %s.', $name));
         try {
-	        $this->manager->generateMigration($name);
+	        $this->manager->generateMigration($name, $baseClass == 'default' ? null : $baseClass);
         } catch(Exception $e) {
         	$this->_registry->getResponse()->appendContent($e->getMessage());
         }
@@ -45,8 +45,14 @@ class Mooduino_Db_Migrations_MigrationProvider extends Zend_Tool_Project_Provide
         $this->init($env);
         if ($revision == 'all') {
         	$migrations = $this->manager->listMigrations();
-        	foreach($migrations as $migration) {
-        		$this->_registry->getResponse()->appendContent($migration->getName());
+        	foreach($migrations as $count => $migration) {
+        		$this->_registry->getResponse()->appendContent(
+        			sprintf(
+        				'%d => %s',
+        				$count+1,
+        				$migration->getName()
+        			)
+        		);
         	}
         } else {
         
