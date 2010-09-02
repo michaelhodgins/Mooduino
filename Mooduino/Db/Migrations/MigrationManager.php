@@ -33,15 +33,28 @@ class Mooduino_Db_Migrations_MigrationManager {
         $fileName = sprintf('%s/%d_%s.php', $this->directory, $timestamp, $name);
         $fpointer = fopen($fileName, 'w');
         try {
-		    fwrite(
-		    	$fpointer,
-		    	sprintf(
-		    		"<?php\nclass Migration_%d_%s extends Mooduino_Db_Migrations_Migration_Abstract {\n\n\tpublic function __construct() {\n\t\t\$this->name = '%s';\n\t}\n\n\tpublic function up() {\n\t\t\n\t}\n\n\tpublic function down() {\n\t\t\n\t}\n}\n\n",
-		    		$timestamp,
-		    		$name,
-		    		$name
-		    	)
-		    );
+        	if (is_null($baseClass)) {
+				fwrite(
+					$fpointer,
+					sprintf(
+						"<?php\nclass Migration_%d_%s extends Mooduino_Db_Migrations_Migration_Abstract {\n\n\tpublic function __construct() {\n\t\t\$this->name = '%s';\n\t\t\$this->timestamp = %s;\n\t}\n\n\tpublic function up() {\n\t\t\n\t}\n\n\tpublic function down() {\n\t\t\n\t}\n}\n\n",
+						$timestamp,
+						$name,
+						$name,
+						$timestamp
+					)
+				);
+		    } else {
+		    	fwrite(
+		    		$fpointer,
+		    		sprintf(
+		    			"<?php\nclass Migration_%d_%s extends %s {\n\n\tpublic function up() {\n\t\t\n\t}\n\n\tpublic function down() {\n\t\t\n\t}\n}\n\n",
+		    			$timestamp,
+		    			$name,
+		    			$baseClass
+		    		)
+		    	);
+		    }
         } catch(Exception $e) {}
         fclose($fpointer);
     }
