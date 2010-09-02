@@ -37,7 +37,7 @@ class Mooduino_Db_Migrations_MigrationManager {
 				fwrite(
 					$fpointer,
 					sprintf(
-						"<?php\nclass Migration_%d_%s extends Mooduino_Db_Migrations_Migration_Abstract {\n\n\tpublic function __construct() {\n\t\t\$this->name = '%s';\n\t\t\$this->timestamp = %s;\n\t}\n\n\tpublic function up() {\n\t\t\n\t}\n\n\tpublic function down() {\n\t\t\n\t}\n}\n\n",
+						"<?php\nclass Migration_%d_%s extends Mooduino_Db_Migrations_Migration_Abstract {\n\n\tpublic function __construct() {\n\t\tparent::__construct('%s', %d);\n\t}\n\n\tpublic function up() {\n\t\t\n\t}\n\n\tpublic function down() {\n\t\t\n\t}\n}\n\n",
 						$timestamp,
 						$name,
 						$name,
