@@ -5,4 +5,6 @@ interface Mooduino_Db_Migrations_Migration {
 	public function getName();
 	public function getTimestamp();
 	public function getProcessedTimestamp();
+ public function setStep($step);
+ public function getStep();
 }

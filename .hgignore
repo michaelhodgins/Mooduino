@@ -1,2 +1,8 @@
 syntax: glob
 *~
+\.orig$
+\.orig\..*$
+\.chg\..*$
+\.rej$
+\.conflict\~$
+nbproject/*
