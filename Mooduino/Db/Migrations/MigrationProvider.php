@@ -45,14 +45,19 @@ class Mooduino_Db_Migrations_MigrationProvider extends Zend_Tool_Project_Provide
         $this->init($env);
         if ($revision == 'all') {
         	$migrations = $this->manager->listMigrations();
-        	foreach($migrations as $count => $migration) {
-        		$this->_registry->getResponse()->appendContent(
-        			sprintf(
-        				'%d => %s',
-        				$count+1,
-        				$migration->getName()
-        			)
-        		);
+        	if (count($migrations)>0) {
+        		$this->_registry->getResponse()->appendContent("ID\tName\tTimestamp\tProcessed");
+		    	foreach($migrations as $count => $migration) {
+		    		$this->_registry->getResponse()->appendContent(
+		    			sprintf(
+		    				"%d\t%s\t%s\t%s",
+		    				$count+1,
+		    				$migration->getName(),
+		    				$migration->getTimestamp(),
+		    				$migration->getProcessedTimestamp()
+		    			)
+		    		);
+		    	}
         	}
         } else {
         

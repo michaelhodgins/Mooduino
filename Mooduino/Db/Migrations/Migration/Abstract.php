@@ -3,6 +3,7 @@ abstract class Mooduino_Db_Migrations_Migration_Abstract implements Mooduino_Db_
 
 	private $name = '';
 	private $timestamp = 0;
+	private $processed = null;
 	
 	public function __construct($name, $timestamp) {
 		$this->name = $name;
@@ -15,5 +16,13 @@ abstract class Mooduino_Db_Migrations_Migration_Abstract implements Mooduino_Db_
 	
 	public function getTimestamp() {
 		return $this->timestamp;
+	}
+	
+	public function getProcessedTimestamp() {
+		return $this->processed;
+	}
+	
+	public function setProcessedTimestamp($timestamp) {
+		$this->processed = intval($timestamp);
 	}
 }

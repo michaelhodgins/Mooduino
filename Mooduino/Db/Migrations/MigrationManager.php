@@ -67,7 +67,10 @@ class Mooduino_Db_Migrations_MigrationManager {
     		if (is_file($this->migrationFilePath($file)) && $file[strlen($file)-1] != '~') {
     			include_once $this->migrationFilePath($file);
     			$klass = $this->migrationClass($file);
-    			$migrations[] = new $klass();
+    			$migration = new $klass();
+    			$record = $this->getRecord($migration->getTimestamp());
+    			$migration->setProcessedTimestamp($record['date_added']);
+    			$migrations[] = $migration;
     		}
     	}
     	return $migrations;
@@ -75,6 +78,22 @@ class Mooduino_Db_Migrations_MigrationManager {
     
     public function validateMigrationName($name) {
     	return preg_match('/^[a-zA-Z]+[a-zA-Z0-9]*/', $name) == 1;
+	}
+	
+	private function getRecord($timestamp) {
+		$select = $this->dbAdapter->select()
+			->from(array('s'=>'schema_version'), array('id', 'version', 'date_added'))
+			->where('version = ?', intval($timestamp))
+			->limit(1);
+		return $this->dbAdapter->fetchRow($select);
+	}
+	
+	private function getLastRecord() {
+		$select = $this->dbAdapter->select()
+			->from(array('s'=>'schema_version'), array('id', 'version', 'date_added'))
+			->limit(1)
+			->orderBy('version DESC');
+		return $this->dbAdapter->fetchRow($select);
 	}
 	
 	private function checkSchemaTable() {
@@ -97,6 +116,7 @@ class Mooduino_Db_Migrations_MigrationManager {
 			'CREATE TABLE `schema_version` (
 				`id` BIGINT NOT NULL AUTO_INCREMENT,
 				`version` BIGINT NOT NULL,
+				`date_added` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 				PRIMARY KEY (`id`)
 			)'
 		);
