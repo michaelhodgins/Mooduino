@@ -49,20 +49,30 @@ class Mooduino_Db_Migrations_MigrationProvider extends Zend_Tool_Project_Provide
     $this->init($env);
   }
 
-  public function show($revision='all', $env='development') {
+  public function show($revision='list', $env='development') {
     $this->init($env);
-    if ($revision == 'all') {
+    if ($revision == 'list') {
       $migrations = $this->manager->listMigrations();
       if (count($migrations) > 0) {
-        $this->_registry->getResponse()->appendContent("ID\tName\tTimestamp\tProcessed");
+        $this->_registry->getResponse()->appendContent("Step\tName\tTimestamp\tProcessed");
         foreach ($migrations as $count => $migration) {
           $this->_registry->getResponse()->appendContent(
               $this->printMigration($migration)
           );
         }
       }
+    } elseif (is_numeric($revision)) {
+      $migrations = array($this->manager->getMigrationByStep($revision));
     } else {
-
+      $migrations = array($this->manager->getMigrationByName($revision));
+    }
+    if (isset($migrations) && !is_null($migrations) && count($migrations) > 0) {
+      $this->_registry->getResponse()->appendContent("Step\tName\tTimestamp\tProcessed");
+      foreach ($migrations as $count => $migration) {
+        $this->_registry->getResponse()->appendContent(
+            $this->printMigration($migration)
+        );
+      }
     }
   }
 

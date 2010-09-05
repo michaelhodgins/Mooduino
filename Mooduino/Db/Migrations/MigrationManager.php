@@ -90,7 +90,7 @@ class Mooduino_Db_Migrations_MigrationManager {
 
   /**
    * Returns the current migration.
-   * @return Mooduino_Db_Migrations_Migration|null
+   * @return Mooduino_Db_Migrations_Migration
    */
   public function getCurrentMigration() {
     $migration = null;
@@ -100,6 +100,41 @@ class Mooduino_Db_Migrations_MigrationManager {
       $migrations = $this->getMigrationsFrom($timestamp, 1);
       if (count($migrations) > 0) {
         $migration = $migrations[0];
+      }
+    }
+    return $migration;
+  }
+
+  /**
+   * Returns the migration with the given step value.
+   * @param int $step
+   * @return Mooduino_Db_Migrations_Migration
+   */
+  public function getMigrationByStep($step) {
+    $migration = null;
+    $files = $this->getMigrationFileNames();
+    foreach ($files as $count => $file) {
+      if (intval($step) == $count+1) {
+        $migration = $this->getMigrationFromFile($file, $count+1);
+        break;
+      }
+    }
+    return $migration;
+  }
+
+  /**
+   * Returns the first migration found with the given name.
+   * @param string $name
+   * @return Mooduino_Db_Migrations_Migration
+   */
+  public function getMigrationByName($name) {
+    $migration = null;
+    $files = $this->getMigrationFileNames();
+    foreach ($files as $count => $file) {
+      $metadata = $this->parseFilenameMetadata($file);
+      if (strval($name) == $metadata['name']) {
+        $migration = $this->getMigrationFromFile($file, $count+1);
+        break;
       }
     }
     return $migration;
@@ -124,28 +159,59 @@ class Mooduino_Db_Migrations_MigrationManager {
    */
   private function getMigrationsFrom($timestamp = 0, $limit = 0) {
     $migrations = array();
-    $files = scandir($this->directory);
-    $count = 0;
-    foreach ($files as $file) {
-      if (is_file($this->getMigrationFilePath($file)) && $file[strlen($file) - 1] != '~') {
-        $count++;
-        if ($this->getMigrationFileTimestamp($file) >= $timestamp) {
-          include_once $this->getMigrationFilePath($file);
-          $klass = $this->getMigrationFileClass($file);
-          $migration = new $klass();
-          $record = $this->getRecord($migration->getTimestamp());
-          $migration->setProcessedTimestamp($record['date_added']);
-          $migration->setStep($count);
-          $migrations[] = $migration;
-          if ($limit > 0 && count($migrations) >= $limit) {
-            break;
-          }
+    $files = $this->getMigrationFileNames();
+    foreach ($files as $count => $file) {
+      $metadata = $this->parseFilenameMetadata($file);
+      if ($metadata['timestamp'] >= $timestamp) {
+        $migrations[] = $this->getMigrationFromFile($file, $count+1);
+        if ($limit > 0 && count($migrations) >= $limit) {
+          break;
         }
       }
     }
     return $migrations;
   }
 
+  /**
+   * Returns an array of filenames for all of the migrations in the application.
+   * @return array[int]string
+   */
+  private function getMigrationFileNames() {
+    $fileNames = array();
+    $files = scandir($this->directory);
+    foreach ($files as $file) {
+      $metadata = $this->parseFilenameMetadata($file);
+      if (is_file($metadata['realpath']) && $file[strlen($file) - 1] != '~') {
+        $fileNames[] = $file;
+      }
+    }
+    return $fileNames;
+  }
+
+  /**
+   * Returns an instance of Mooduino_Db_Migrations_Migration when passed the
+   * name of a file that contains the implementation.
+   * @param string $file
+   * @param int $step
+   * @return Mooduino_Db_Migrations_Migration
+   */
+  private function getMigrationFromFile($file, $step) {
+    $metadata = $this->parseFilenameMetadata($file);
+    include_once $metadata['realpath'];
+    $klass = $metadata['class'];
+    $migration = new $klass();
+    $record = $this->getRecord($migration->getTimestamp());
+    $migration->setProcessedTimestamp($record['date_added']);
+    $migration->setStep($step);
+    return $migration;
+  }
+
+  /**
+   * Returns the migration record from the schema table that has the given
+   * version timestamp.
+   * @param int $timestamp
+   * @return array[sting]string
+   */
   private function getRecord($timestamp) {
     $select = $this->dbAdapter->select()
             ->from(array('s' => 'schema_version'), array('id', 'version', 'date_added'))
@@ -202,37 +268,20 @@ class Mooduino_Db_Migrations_MigrationManager {
   }
 
   /**
-   * Returns the real path of the given file, assuming it is a valid
-   * migration file.
-   * @param string $file
-   * @return string
+   *
+   * @param <type> $filename
+   * @return array
    */
-  private function getMigrationFilePath($file) {
-    return realpath($this->directory . '/' . $file);
-  }
-
-  /**
-   * Given the name of a migration file, the migration's class name is returned.
-   * @param string $file
-   * @return string
-   */
-  private function getMigrationFileClass($file) {
-    return 'Migration_' . substr($file, 0, strlen($file) - 4);
-  }
-
-  /**
-   * Given the name of a migration file, the migration's timestamp is returned.
-   * @param string $file
-   * @return int
-   */
-  private function getMigrationFileTimestamp($file) {
-    $timestamp = null;
+  private function parseFilenameMetadata($filename) {
+    $metadata = array();
+    $metadata['class'] = 'Migration_' . substr($filename, 0, strlen($filename) - 4);
+    $metadata['realpath'] = realpath($this->directory . '/' . $filename);
     $matches = array();
-    if (preg_match('/^([0-9]+)_/', $file, &$matches) == 1) {
-      return intval($matches[1]);
+    if (preg_match('/^([0-9]+)_([a-zA-Z]+[a-zA-Z0-9]*)\.php/', $filename, &$matches) == 1) {
+      $metadata['timestamp'] = intval($matches[1]);
+      $metadata['name'] = $matches[2];
     }
-    print $timestamp;
-    return $timestamp;
+    return $metadata;
   }
 
 }
