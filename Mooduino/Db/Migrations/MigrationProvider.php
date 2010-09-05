@@ -53,14 +53,6 @@ class Mooduino_Db_Migrations_MigrationProvider extends Zend_Tool_Project_Provide
     $this->init($env);
     if ($revision == 'list') {
       $migrations = $this->manager->listMigrations();
-      if (count($migrations) > 0) {
-        $this->_registry->getResponse()->appendContent("Step\tName\tTimestamp\tProcessed");
-        foreach ($migrations as $count => $migration) {
-          $this->_registry->getResponse()->appendContent(
-              $this->printMigration($migration)
-          );
-        }
-      }
     } elseif (is_numeric($revision)) {
       $migrations = array($this->manager->getMigrationByStep($revision));
     } else {
