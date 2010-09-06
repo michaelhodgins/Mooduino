@@ -47,6 +47,11 @@ class Mooduino_Db_Migrations_MigrationProvider extends Zend_Tool_Project_Provide
 
   public function update($to='latest', $env='development') {
     $this->init($env);
+    if ($to == 'latest') {
+    	$this->manager->runTo(Mooduino_Db_Migrations_MigrationManager::TOP);
+    } elseif (is_numeric($to)) {
+    	$this->manager->runTo($to);
+    }
   }
 
   public function show($revision='list', $env='development') {

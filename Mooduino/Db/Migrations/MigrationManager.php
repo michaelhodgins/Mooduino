@@ -10,6 +10,8 @@ class Mooduino_Db_Migrations_MigrationManager {
    * @var Zend_Db_Adapter_Abstract
    */
   private $dbAdapter;
+  
+  const TOP = -1;
 
   /**
    * Constructs the MigrationManager. This is private
@@ -83,7 +85,7 @@ class Mooduino_Db_Migrations_MigrationManager {
    * Returns an array of the migrations currently in the project.
    * @return array[int]Mooduino_Db_Migrations_Migration
    */
-  public function listMigrations() {
+  public function listMigrations() {//TODO: rename to 'getMigrations'?
     $this->checkSchemaTable();
     return $this->getMigrationsFrom();
   }
@@ -147,6 +149,17 @@ class Mooduino_Db_Migrations_MigrationManager {
    */
   public function validateMigrationName($name) {
     return preg_match('/^[a-zA-Z]+[a-zA-Z0-9]*/', $name) == 1;
+  }
+  
+  public function runTo($step) {
+  	
+  	if ($step == self::TOP) {
+  	
+  	}
+  }
+  
+  public function getTopStep() {
+  	$step = 0;	
   }
 
   /**
