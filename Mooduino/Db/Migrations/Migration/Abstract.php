@@ -101,11 +101,11 @@ abstract class Mooduino_Db_Migrations_Migration_Abstract implements Mooduino_Db_
    */
   public static function toString(Mooduino_Db_Migrations_Migration $migration) {
     return sprintf(
-        "%d\t%s\t%s\t%s",
+        "%d\t%-20s\t%s\t%s",
         $migration->getStep(),
         $migration->getName(),
         $migration->getTimestamp(),
-        $migration->getProcessedTimestamp()
+        new Zend_Date($migration->getProcessedTimestamp())
     );
   }
 

@@ -127,7 +127,7 @@ class Mooduino_Db_Migrations_MigrationProvider extends Zend_Tool_Project_Provide
       $migrations = array($this->manager->getMigrationByName($revision));
     }
     if (isset($migrations) && !is_null($migrations) && count($migrations) > 0) {
-      $this->_registry->getResponse()->appendContent("Step\tName\tTimestamp\tProcessed");
+      $this->_registry->getResponse()->appendContent("Step\tName\t\t\tTimestamp\tProcessed");
       foreach ($migrations as $count => $migration) {
         $this->_registry->getResponse()->appendContent(
             $this->migrationToString($migration)
