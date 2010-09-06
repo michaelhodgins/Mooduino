@@ -138,13 +138,11 @@ class Mooduino_Db_Migrations_MigrationProvider extends Zend_Tool_Project_Provide
    * @return string
    */
   private function migrationToString(Mooduino_Db_Migrations_Migration $migration) {
-    return sprintf(
-        "%d\t%s\t%s\t%s",
-        $migration->getStep(),
-        $migration->getName(),
-        $migration->getTimestamp(),
-        $migration->getProcessedTimestamp()
-    );
+    if (method_exists($migration, '__toString')) {
+      return $migration->__toString();
+    } else {
+      return Mooduino_Db_Migrations_Migration_Abstract::toString($migration);
+    }
   }
 
   /**
