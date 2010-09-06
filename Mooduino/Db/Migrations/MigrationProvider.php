@@ -59,6 +59,7 @@ class Mooduino_Db_Migrations_MigrationProvider extends Zend_Tool_Project_Provide
   public function redo($step=1, $env='development') {
     $this->init($env);
     $this->manager->redo($step);
+    $this->_registry->getResponse()->appendContent($this->manager->getMessage());
   }
 
   /**
@@ -69,6 +70,7 @@ class Mooduino_Db_Migrations_MigrationProvider extends Zend_Tool_Project_Provide
   public function undo($step=1, $env='development') {
     $this->init($env);
     $this->manager->undo($step);
+    $this->_registry->getResponse()->appendContent($this->manager->getMessage());
   }
 
   /**
@@ -102,8 +104,9 @@ class Mooduino_Db_Migrations_MigrationProvider extends Zend_Tool_Project_Provide
     } elseif (is_numeric($to)) {
     	$this->manager->runTo($to);
     } else {
-      $this->_registry->getResponse()->appendContent('Update to value should be a number or \'latest\'');
+      throw new Exception('Update to value should be a number or \'latest\'');
     }
+    $this->_registry->getResponse()->appendContent($this->manager->getMessage());
   }
 
   /**
@@ -140,6 +143,7 @@ class Mooduino_Db_Migrations_MigrationProvider extends Zend_Tool_Project_Provide
   public function clear($env = 'development') {
     $this->init($env);
     $this->manager->runTo(0);
+    $this->_registry->getResponse()->appendContent($this->manager->getMessage());
   }
 
   /**

@@ -3,26 +3,42 @@
 class Mooduino_Db_Migrations_MigrationManager {
 
   /**
+   * The directory where the migration files are located.
    * @var string
    */
   private $directory;
   /**
+   * The database adapter.
    * @var Zend_Db_Adapter_Abstract
    */
   private $dbAdapter;
 
   /**
-   * @var a constant meaning the last step value.
+   * A constant meaning the last step value.
+   * @var int
    */
   const TOP = -1;
 
+  /**
+   * Migrate up.
+   * @var int
+   */
   private static $UP = 1;
+  /**
+   * Migrate down.
+   * @var int
+   */
   private static $DOWN = -1;
   /**
    * Set to true when we know that the table is in place.
    * @var boolean
    */
   private $tableInPlace = false;
+  /**
+   * A message set after migrations are executed.
+   * @var string
+   */
+  private $message = '';
 
   /**
    * Constructs the MigrationManager. This is private
@@ -43,6 +59,22 @@ class Mooduino_Db_Migrations_MigrationManager {
     if (!is_writable($this->directory)) {
       throw new Exception('migration directory must be writable');
     }
+  }
+
+  /**
+   * Returns the last message from the migration process.
+   * @return string
+   */
+  public function getMessage() {
+    return $this->message;
+  }
+
+  /**
+   * Sets the migration process message.
+   * @param string $message
+   */
+  private function setMessage($message) {
+    $this->message = strval($message);
   }
 
   /**
@@ -94,6 +126,7 @@ class Mooduino_Db_Migrations_MigrationManager {
       throw new Exception('An error occured while generating the migration file.', $e->getCode(), $e);
     }
     fclose($fpointer);
+    $this->setMessage('Migration saved to '.$fileName);
   }
 
   /**
@@ -193,16 +226,24 @@ class Mooduino_Db_Migrations_MigrationManager {
               is_null($current) ? 0 : $current->getTimestamp() + 1
       );
     }
+    $count = 0;
     foreach ($migrations as $migration) {
       if ($undo) {
         if ($migration->getStep() > $step) {
           $this->undoMigration($migration);
+          $count++;
         }
       } else {
         if ($migration->getStep() <= $step) {
           $this->runMigration($migration);
+          $count++;
         }
       }
+    }
+    if ($undo) {
+      $this->setMessage($count.' migrations rolled back.');
+    } else {
+      $this->setMessage($count.' migrations applied.');
     }
   }
 
@@ -213,7 +254,8 @@ class Mooduino_Db_Migrations_MigrationManager {
       throw new Exception('Step should be a number.');
     }
     $current = $this->getCurrentMigration();
-    $this->runTo($current->getStep()-$step);
+    $this->runTo($current->getStep() - $step);
+    $this->setMessage($step.' migrations rolled back.');
   }
 
   public function redo($step) {
@@ -223,8 +265,9 @@ class Mooduino_Db_Migrations_MigrationManager {
       throw new Exception('Step should be a number.');
     }
     $current = $this->getCurrentMigration();
-    $this->runTo($current->getStep()-$step);
+    $this->runTo($current->getStep() - $step);
     $this->runTo($current->getStep());
+    $this->setMessage($step.' migrations rolled back and reapplied.');
   }
 
   /**
@@ -364,7 +407,7 @@ class Mooduino_Db_Migrations_MigrationManager {
         $this->createSchemaTable();
       }
     }
-    return !$tableFound;
+    return!$tableFound;
   }
 
   /**
