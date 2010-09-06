@@ -93,6 +93,7 @@ class Mooduino_Db_Migrations_MigrationProvider extends Zend_Tool_Project_Provide
    * @param string $env
    */
   public function update($to='latest', $env='development') {
+    Zend_Debug::dump($to, '$to');
     $this->init($env);
     if ($to == 'latest') {
     	$this->manager->runTo(Mooduino_Db_Migrations_MigrationManager::TOP);
@@ -114,7 +115,7 @@ class Mooduino_Db_Migrations_MigrationProvider extends Zend_Tool_Project_Provide
   public function show($revision='list', $env='development') {
     $this->init($env);
     if ($revision == 'list') {
-      $migrations = $this->manager->listMigrations();
+      $migrations = $this->manager->getMigrations();
     } elseif (is_numeric($revision)) {
       $migrations = array($this->manager->getMigrationByStep($revision));
     } else {
@@ -128,6 +129,15 @@ class Mooduino_Db_Migrations_MigrationProvider extends Zend_Tool_Project_Provide
         );
       }
     }
+  }
+
+  /**
+   * Rolls back all migrations.
+   * @param string $env
+   */
+  public function clear($env = 'development') {
+    $this->init($env);
+    $this->manager->runTo(0);
   }
 
   /**

@@ -16,6 +16,14 @@ class Mooduino_Db_Migrations_MigrationManager {
    */
   const TOP = -1;
 
+  private static $UP = 1;
+  private static $DOWN = -1;
+  /**
+   * Set to true when we know that the table is in place.
+   * @var boolean
+   */
+  private $tableInPlace = false;
+
   /**
    * Constructs the MigrationManager. This is private
    * as MigrationManager is a singleton.
@@ -53,8 +61,6 @@ class Mooduino_Db_Migrations_MigrationManager {
     }
     if (function_exists('microtime')) {
       $timestamp = preg_replace('/\./', '', microtime(true));
-      Zend_Debug::dump($timestamp, 'timestamp', false);
-//      exit;
     } else {
       $timestamp = time();
     }
@@ -94,8 +100,7 @@ class Mooduino_Db_Migrations_MigrationManager {
    * Returns an array of the migrations currently in the project.
    * @return array[int]Mooduino_Db_Migrations_Migration
    */
-  public function listMigrations() {//TODO: rename to 'getMigrations'?
-    $this->checkSchemaTable();
+  public function getMigrations() {
     return $this->getMigrationsFrom();
   }
 
@@ -174,38 +179,34 @@ class Mooduino_Db_Migrations_MigrationManager {
     } else {
       throw new Exception('Step should be a number.');
     }
+//    Zend_Debug::dump($step, '$step');
     $current = $this->getCurrentMigration();
+//    Zend_Debug::dump($current, '$current');
     $undo = (!is_null($current)) && ($step < $current->getStep());
+//    Zend_Debug::dump($undo, '$undo');
     if ($undo) {
       $migrations = array_reverse(
-          $this->getMigrationsTo(
-              $current->getTimestamp(),
-              $current->getStep() - $step
-          )
+              $this->getMigrationsTo(
+                  $current->getTimestamp(),
+                  $current->getStep() - $step
+              )
       );
     } else {
       $migrations = $this->getMigrationsFrom(
               is_null($current) ? 0 : $current->getTimestamp() + 1
       );
     }
-    $this->dbAdapter->beginTransaction();
-    try {
-      foreach ($migrations as $migration) {
-        if ($undo) {
-          if ($migration->getStep() > $step) {
-            $this->undoMigration($migration);
-          }
-        } else {
-          if ($migration->getStep() <= $step) {
-            $this->runMigration($migration);
-          }
+    foreach ($migrations as $migration) {
+      if ($undo) {
+        if ($migration->getStep() > $step) {
+          $this->undoMigration($migration);
+        }
+      } else {
+        if ($migration->getStep() <= $step) {
+          $this->runMigration($migration);
         }
       }
-    } catch (Exception $e) {
-      $this->dbAdapter->rollBack();
-      throw new Exception('An error occured while executing the migration(s).', $e->getCode(), $e);
     }
-    $this->dbAdapter->commit();
   }
 
   /**
@@ -303,8 +304,9 @@ class Mooduino_Db_Migrations_MigrationManager {
    * @return array[sting]string
    */
   private function getRecord($timestamp) {
+    $this->checkSchemaTable();
     $select = $this->dbAdapter->select()
-            ->from(array('s' => 'schema_version'), array('id', 'version', 'date_added'))
+            ->from(array('s' => 'schema_version'), array('id', 'version', 'date_added' => 'UNIX_TIMESTAMP(date_added)'))
             ->where('version = ?', intval($timestamp))
             ->limit(1);
     return $this->dbAdapter->fetchRow($select);
@@ -315,6 +317,8 @@ class Mooduino_Db_Migrations_MigrationManager {
    * @return array[string]string
    */
   private function getLastRecord() {
+    $this->checkSchemaTable();
+    $this->checkSchemaTable();
     $select = $this->dbAdapter->select()
             ->from(array('s' => 'schema_version'), array('id', 'version', 'date_added'))
             ->limit(1)
@@ -328,19 +332,21 @@ class Mooduino_Db_Migrations_MigrationManager {
    * @return boolean
    */
   private function checkSchemaTable() {
-    $tables = $this->dbAdapter->query('SHOW TABLES;');
-    $tableFound = false;
-    foreach ($tables as $table) {
-      $name = array_pop($table);
-      if ($name == 'schema_version') {
-        $tableFound = true;
-        break;
+    $tableFound = $this->tableInPlace;
+    if (!$tableFound) {
+      $tables = $this->dbAdapter->query('SHOW TABLES;');
+      foreach ($tables as $table) {
+        $name = array_pop($table);
+        if ($name == 'schema_version') {
+          $tableFound = true;
+          break;
+        }
+      }
+      if (!$tableFound) {
+        $this->createSchemaTable();
       }
     }
-    if (!$tableFound) {
-      $this->createSchemaTable();
-    }
-    return!$tableFound;
+    return !$tableFound;
   }
 
   /**
@@ -355,6 +361,7 @@ class Mooduino_Db_Migrations_MigrationManager {
           PRIMARY KEY (`id`)
          )'
     );
+    $this->tableInPlace = true;
   }
 
   /**
@@ -380,8 +387,7 @@ class Mooduino_Db_Migrations_MigrationManager {
    * @param Mooduino_Db_Migrations_Migration $migration
    */
   private function runMigration(Mooduino_Db_Migrations_Migration $migration) {
-    $this->execute($migration->up());
-    $this->dbAdapter->insert('schema_version', array('version' => $migration->getTimestamp()));
+    $this->executeMigration($migration, self::$UP);
   }
 
   /**
@@ -401,8 +407,7 @@ class Mooduino_Db_Migrations_MigrationManager {
    * @param Mooduino_Db_Migrations_Migration $migration
    */
   private function undoMigration(Mooduino_Db_Migrations_Migration $migration) {
-    $this->execute($migration->down());
-    $this->dbAdapter->delete('schema_version', 'version = '.$migration->getTimestamp());
+    $this->executeMigration($migration, self::$DOWN);
   }
 
   /**
@@ -417,6 +422,36 @@ class Mooduino_Db_Migrations_MigrationManager {
   }
 
   /**
+   * Executes a single migration against the database within a database
+   * transaction. Whether the migration is executed up or down is determined by
+   * the value of $direction.
+   * @param Mooduino_Db_Migrations_Migration $migration
+   * @param int $direction
+   */
+  private function executeMigration(Mooduino_Db_Migrations_Migration $migration, $direction) {
+    if (!in_array($direction, array(self::$UP, self::$DOWN))) {
+      throw new Exception('direction unknown');
+    }
+    $this->checkSchemaTable();
+    $this->dbAdapter->beginTransaction();
+    try {
+      if ($direction == self::$UP) {
+        $query = $migration->up();
+        $this->dbAdapter->insert('schema_version', array('version' => $migration->getTimestamp()));
+      } elseif ($direction == self::$DOWN) {
+        $query = $migration->down();
+        $this->dbAdapter->delete('schema_version', 'version = ' . $migration->getTimestamp());
+      }
+      $this->execute($query);
+    } catch (Exception $e) {
+      echo $e->getMessage();
+      $this->dbAdapter->rollBack();
+      throw new Exception('An error occured while executing the migration(s).', $e->getCode(), $e);
+    }
+    $this->dbAdapter->commit();
+  }
+
+  /**
    * Executes the given SQL statment or statements. The parameter can be either
    * a single string or an array of strings.
    * @param string|array[int]string $query
@@ -427,6 +462,7 @@ class Mooduino_Db_Migrations_MigrationManager {
         $this->execute($subquery);
       }
     } elseif (is_string($query)) {
+//      echo $query."\n";
       $this->dbAdapter->query($query);
     }
   }

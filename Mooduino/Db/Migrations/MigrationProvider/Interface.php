@@ -46,4 +46,9 @@ interface Mooduino_Db_Migrations_MigrationProvider_Interface {
    * @param string $env
    */
 	public function show($revision='all', $env='development');
+ /**
+  * Rolls back all migrations.
+  * @param strint $env
+  */
+ public function clear($env='development');
 }
