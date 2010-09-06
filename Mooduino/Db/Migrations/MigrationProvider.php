@@ -58,6 +58,7 @@ class Mooduino_Db_Migrations_MigrationProvider extends Zend_Tool_Project_Provide
    */
   public function redo($step=1, $env='development') {
     $this->init($env);
+    $this->manager->redo($step);
   }
 
   /**
@@ -67,6 +68,7 @@ class Mooduino_Db_Migrations_MigrationProvider extends Zend_Tool_Project_Provide
    */
   public function undo($step=1, $env='development') {
     $this->init($env);
+    $this->manager->undo($step);
   }
 
   /**
@@ -93,7 +95,7 @@ class Mooduino_Db_Migrations_MigrationProvider extends Zend_Tool_Project_Provide
    * @param string $env
    */
   public function update($to='latest', $env='development') {
-    Zend_Debug::dump($to, '$to');
+//    Zend_Debug::dump($to, '$to');
     $this->init($env);
     if ($to == 'latest') {
     	$this->manager->runTo(Mooduino_Db_Migrations_MigrationManager::TOP);

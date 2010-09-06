@@ -179,11 +179,8 @@ class Mooduino_Db_Migrations_MigrationManager {
     } else {
       throw new Exception('Step should be a number.');
     }
-//    Zend_Debug::dump($step, '$step');
     $current = $this->getCurrentMigration();
-//    Zend_Debug::dump($current, '$current');
     $undo = (!is_null($current)) && ($step < $current->getStep());
-//    Zend_Debug::dump($undo, '$undo');
     if ($undo) {
       $migrations = array_reverse(
               $this->getMigrationsTo(
@@ -207,6 +204,27 @@ class Mooduino_Db_Migrations_MigrationManager {
         }
       }
     }
+  }
+
+  public function undo($step) {
+    if (is_numeric($step)) {
+      $step = intval($step);
+    } else {
+      throw new Exception('Step should be a number.');
+    }
+    $current = $this->getCurrentMigration();
+    $this->runTo($current->getStep()-$step);
+  }
+
+  public function redo($step) {
+    if (is_numeric($step)) {
+      $step = intval($step);
+    } else {
+      throw new Exception('Step should be a number.');
+    }
+    $current = $this->getCurrentMigration();
+    $this->runTo($current->getStep()-$step);
+    $this->runTo($current->getStep());
   }
 
   /**
