@@ -51,6 +51,8 @@ class Mooduino_Db_Migrations_MigrationProvider extends Zend_Tool_Project_Provide
     	$this->manager->runTo(Mooduino_Db_Migrations_MigrationManager::TOP);
     } elseif (is_numeric($to)) {
     	$this->manager->runTo($to);
+    } else {
+      $this->_registry->getResponse()->appendContent('Update to value should be a number or \'latest\'');
     }
   }
 

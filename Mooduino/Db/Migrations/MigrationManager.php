@@ -10,7 +10,10 @@ class Mooduino_Db_Migrations_MigrationManager {
    * @var Zend_Db_Adapter_Abstract
    */
   private $dbAdapter;
-  
+
+  /**
+   * @var a constant meaning the last step value.
+   */
   const TOP = -1;
 
   /**
@@ -48,7 +51,13 @@ class Mooduino_Db_Migrations_MigrationManager {
     if (!$this->validateMigrationName($name)) {
       throw new Exception('Check the migration name');
     }
-    $timestamp = mktime();
+    if (function_exists('microtime')) {
+      $timestamp = preg_replace('/\./', '', microtime(true));
+      Zend_Debug::dump($timestamp, 'timestamp', false);
+//      exit;
+    } else {
+      $timestamp = time();
+    }
     $fileName = sprintf('%s/%d_%s.php', $this->directory, $timestamp, $name);
     $fpointer = fopen($fileName, 'w');
     try {
@@ -116,8 +125,8 @@ class Mooduino_Db_Migrations_MigrationManager {
     $migration = null;
     $files = $this->getMigrationFileNames();
     foreach ($files as $count => $file) {
-      if (intval($step) == $count+1) {
-        $migration = $this->getMigrationFromFile($file, $count+1);
+      if (intval($step) == $count + 1) {
+        $migration = $this->getMigrationFromFile($file, $count + 1);
         break;
       }
     }
@@ -135,7 +144,7 @@ class Mooduino_Db_Migrations_MigrationManager {
     foreach ($files as $count => $file) {
       $metadata = $this->parseFilenameMetadata($file);
       if (strval($name) == $metadata['name']) {
-        $migration = $this->getMigrationFromFile($file, $count+1);
+        $migration = $this->getMigrationFromFile($file, $count + 1);
         break;
       }
     }
@@ -150,16 +159,61 @@ class Mooduino_Db_Migrations_MigrationManager {
   public function validateMigrationName($name) {
     return preg_match('/^[a-zA-Z]+[a-zA-Z0-9]*/', $name) == 1;
   }
-  
+
+  /**
+   * Runs migrations to the given step. If the current step is after the given
+   * target step, the migrations after the target are rolled back.
+   * @see Mooduino_Db_Migrations_MigrationManager::TOP
+   * @param int $step Either the actual step value or Mooduino_Db_Migrations_MigrationManager::TOP
+   */
   public function runTo($step) {
-  	
-  	if ($step == self::TOP) {
-  	
-  	}
+    if ($step == self::TOP) {
+      $step = $this->getTopStep();
+    } elseif (is_numeric($step)) {
+      $step = intval($step);
+    } else {
+      throw new Exception('Step should be a number.');
+    }
+    $current = $this->getCurrentMigration();
+    $undo = (!is_null($current)) && ($step < $current->getStep());
+    if ($undo) {
+      $migrations = array_reverse(
+          $this->getMigrationsTo(
+              $current->getTimestamp(),
+              $current->getStep() - $step
+          )
+      );
+    } else {
+      $migrations = $this->getMigrationsFrom(
+              is_null($current) ? 0 : $current->getTimestamp() + 1
+      );
+    }
+    $this->dbAdapter->beginTransaction();
+    try {
+      foreach ($migrations as $migration) {
+        if ($undo) {
+          if ($migration->getStep() > $step) {
+            $this->undoMigration($migration);
+          }
+        } else {
+          if ($migration->getStep() <= $step) {
+            $this->runMigration($migration);
+          }
+        }
+      }
+    } catch (Exception $e) {
+      $this->dbAdapter->rollBack();
+      throw new Exception('An error occured while executing the migration(s).', $e->getCode(), $e);
+    }
+    $this->dbAdapter->commit();
   }
-  
-  public function getTopStep() {
-  	$step = 0;	
+
+  /**
+   * Returns the step value of the last migration file.
+   * @return int
+   */
+  private function getTopStep() {
+    return count($this->getMigrationFileNames());
   }
 
   /**
@@ -176,13 +230,36 @@ class Mooduino_Db_Migrations_MigrationManager {
     foreach ($files as $count => $file) {
       $metadata = $this->parseFilenameMetadata($file);
       if ($metadata['timestamp'] >= $timestamp) {
-        $migrations[] = $this->getMigrationFromFile($file, $count+1);
+        $migrations[] = $this->getMigrationFromFile($file, $count + 1);
         if ($limit > 0 && count($migrations) >= $limit) {
           break;
         }
       }
     }
     return $migrations;
+  }
+
+  /**
+   * Returns migration objects with the timestamp equal or less than the given
+   * timestamp. If $limit is greater than 0, no more than that number of
+   * migrations will be given.
+   * @param int $timestamp
+   * @param int $limit
+   * @return array[int]Mooduino_Db_Migrations_Migration
+   */
+  private function getMigrationsTo($timestamp = -1, $limit = 0) {
+    $migrations = array();
+    $files = array_reverse($this->getMigrationFileNames());
+    foreach ($files as $count => $file) {
+      $metadata = $this->parseFilenameMetadata($file);
+      if ($timestamp < 0 || $metadata['timestamp'] <= $timestamp) {
+        $migrations[] = $this->getMigrationFromFile($file, count($files) - $count);
+        if ($limit > 0 && count($migrations) >= $limit) {
+          break;
+        }
+      }
+    }
+    return array_reverse($migrations);
   }
 
   /**
@@ -272,18 +349,18 @@ class Mooduino_Db_Migrations_MigrationManager {
   private function createSchemaTable() {
     $this->dbAdapter->query(
         'CREATE TABLE `schema_version` (
-				`id` BIGINT NOT NULL AUTO_INCREMENT,
-				`version` BIGINT NOT NULL,
-				`date_added` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-				PRIMARY KEY (`id`)
-			)'
+          `id` BIGINT NOT NULL AUTO_INCREMENT,
+          `version` BIGINT NOT NULL,
+          `date_added` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          PRIMARY KEY (`id`)
+         )'
     );
   }
 
   /**
-   *
-   * @param <type> $filename
-   * @return array
+   * Returns metadata about a migration file, implied from the file name alone.
+   * @param string $filename
+   * @return array[string]mixed
    */
   private function parseFilenameMetadata($filename) {
     $metadata = array();
@@ -295,6 +372,63 @@ class Mooduino_Db_Migrations_MigrationManager {
       $metadata['name'] = $matches[2];
     }
     return $metadata;
+  }
+
+  /**
+   * Executes the SQL statements returned by the given migration's up()
+   * function.
+   * @param Mooduino_Db_Migrations_Migration $migration
+   */
+  private function runMigration(Mooduino_Db_Migrations_Migration $migration) {
+    $this->execute($migration->up());
+    $this->dbAdapter->insert('schema_version', array('version' => $migration->getTimestamp()));
+  }
+
+  /**
+   * Executes the SQL statements returned by the given migrations' up()
+   * functions.
+   * @param array[int]Mooduino_Db_Migrations_Migration $migrations
+   */
+  private function runMigrations($migrations) {
+    foreach ($migrations as $migration) {
+      $this->runMigration($migration);
+    }
+  }
+
+  /**
+   * Executes the SQL statements returned by the given migration's down()
+   * function.
+   * @param Mooduino_Db_Migrations_Migration $migration
+   */
+  private function undoMigration(Mooduino_Db_Migrations_Migration $migration) {
+    $this->execute($migration->down());
+    $this->dbAdapter->delete('schema_version', 'version = '.$migration->getTimestamp());
+  }
+
+  /**
+   * Executes the SQL statements returned by the given migrations' down()
+   * functions.
+   * @param array[int]Mooduino_Db_Migrations_Migration $migrations
+   */
+  private function undoMigrations($migrations) {
+    foreach ($migrations as $migrations) {
+      $this->undoMigration($migration);
+    }
+  }
+
+  /**
+   * Executes the given SQL statment or statements. The parameter can be either
+   * a single string or an array of strings.
+   * @param string|array[int]string $query
+   */
+  private function execute($query) {
+    if (is_array($query)) {
+      foreach ($query as $subquery) {
+        $this->execute($subquery);
+      }
+    } elseif (is_string($query)) {
+      $this->dbAdapter->query($query);
+    }
   }
 
 }
