@@ -126,7 +126,7 @@ class Mooduino_Db_Migrations_MigrationManager {
       throw new Exception('An error occured while generating the migration file.', $e->getCode(), $e);
     }
     fclose($fpointer);
-    $this->setMessage('Migration saved to '.$fileName);
+    $this->setMessage('Migration saved to ' . $fileName);
   }
 
   /**
@@ -240,11 +240,14 @@ class Mooduino_Db_Migrations_MigrationManager {
         }
       }
     }
-    if ($undo) {
-      $this->setMessage($count.' migrations rolled back.');
-    } else {
-      $this->setMessage($count.' migrations applied.');
-    }
+    $this->setMessage(
+        sprintf(
+            '%d migration%s %s.',
+            $count,
+            $count == 1 ? '' : 's',
+            $undo ? 'rolled back' : 'applied'
+        )
+    );
   }
 
   public function undo($step) {
@@ -255,7 +258,13 @@ class Mooduino_Db_Migrations_MigrationManager {
     }
     $current = $this->getCurrentMigration();
     $this->runTo($current->getStep() - $step);
-    $this->setMessage($step.' migrations rolled back.');
+    $this->setMessage(
+        sprintf(
+            '%d migration%s rolled back.',
+            $step,
+            $step == 1 ? '' : 's'
+        )
+    );
   }
 
   public function redo($step) {
@@ -267,7 +276,13 @@ class Mooduino_Db_Migrations_MigrationManager {
     $current = $this->getCurrentMigration();
     $this->runTo($current->getStep() - $step);
     $this->runTo($current->getStep());
-    $this->setMessage($step.' migrations rolled back and reapplied.');
+    $this->setMessage(
+        sprintf(
+            '%d migration%s rolled back and reapplied.',
+            $step,
+            $step == 1 ? '' : 's'
+        )
+    );
   }
 
   /**
