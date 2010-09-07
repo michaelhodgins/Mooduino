@@ -105,7 +105,7 @@ abstract class Mooduino_Db_Migrations_Migration_Abstract implements Mooduino_Db_
         $migration->getStep(),
         $migration->getName(),
         $migration->getTimestamp(),
-        new Zend_Date($migration->getProcessedTimestamp())
+        $migration->getProcessedTimestamp() == 0 ? 'Never' : new Zend_Date($migration->getProcessedTimestamp())
     );
   }
 
