@@ -106,19 +106,19 @@ class Mooduino_Db_Migrations_MigrationManager {
     if (!$this->validateMigrationName($name)) {
       throw new Exception('Check the migration name');
     }
-    if (function_exists('microtime')) {
-      $timestamp = preg_replace('/\./', '', microtime(true));
-    } else {
+//    if (function_exists('microtime')) {
+//     $timestamp = preg_replace('/\./', '', microtime(true));
+//    } else {
       $timestamp = time();
-    }
-    $fileName = sprintf('%s/%d_%s.php', $this->directory, $timestamp, $name);
+//    }
+    $fileName = sprintf('%s/%s_%s.php', $this->directory, $timestamp, $name);
     $fpointer = fopen($fileName, 'w');
     try {
       if (is_null($baseClass)) {
         fwrite(
             $fpointer,
             sprintf(
-                "<?php\nclass Migration_%d_%s extends Mooduino_Db_Migrations_Migration_Abstract {\n\n\tpublic function __construct() {\n\t\tparent::__construct('%s', %d);\n\t}\n\n\tpublic function up() {\n\t\t\n\t}\n\n\tpublic function down() {\n\t\t\n\t}\n}\n\n",
+                "<?php\nclass Migration_%s_%s extends Mooduino_Db_Migrations_Migration_Abstract {\n\n\tpublic function __construct() {\n\t\tparent::__construct('%s', %s);\n\t}\n\n\tpublic function up() {\n\t\t\n\t}\n\n\tpublic function down() {\n\t\t\n\t}\n}\n\n",
                 $timestamp,
                 $name,
                 $name,
@@ -129,7 +129,7 @@ class Mooduino_Db_Migrations_MigrationManager {
         fwrite(
             $fpointer,
             sprintf(
-                "<?php\nclass Migration_%d_%s extends %s {\n\n\tpublic function up() {\n\t\t\n\t}\n\n\tpublic function down() {\n\t\t\n\t}\n}\n\n",
+                "<?php\nclass Migration_%s_%s extends %s {\n\n\tpublic function up() {\n\t\t\n\t}\n\n\tpublic function down() {\n\t\t\n\t}\n}\n\n",
                 $timestamp,
                 $name,
                 $baseClass
