@@ -52,4 +52,10 @@ interface Mooduino_Db_Migrations_Migration {
   * @return int
   */
  public function getStep();
+ /**
+  * Returns true if this migration should execute in the given environment.
+  * @param string $env
+  * @return boolean
+  */
+ public function runsInEnvironment($env);
 }

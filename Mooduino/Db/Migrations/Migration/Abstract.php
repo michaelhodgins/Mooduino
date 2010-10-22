@@ -125,4 +125,16 @@ abstract class Mooduino_Db_Migrations_Migration_Abstract implements Mooduino_Db_
     );
   }
 
+  /**
+   * This method always returns true, meaning that this migration should run
+   * in all environments. The method should be overridden if another value
+   * is needed (which is to say, if the migration should only be executed in
+   * a certain environment).
+   * @param string $env
+   * @return boolean
+   */
+  public function runsInEnvironment($env) {
+    return true;
+  }
+
 }

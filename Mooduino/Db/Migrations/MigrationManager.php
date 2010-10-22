@@ -1,19 +1,20 @@
 <?php
+
 /*  Copyright 2010  Michael Hodgins  (email : michael_hodgins@hotmail.)
 
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License, version 2, as
-    published by the Free Software Foundation.
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License, version 2, as
+  published by the Free Software Foundation.
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with this program; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-*/
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+ */
 
 class Mooduino_Db_Migrations_MigrationManager {
 
@@ -54,6 +55,11 @@ class Mooduino_Db_Migrations_MigrationManager {
    * @var string
    */
   private $message = '';
+  /**
+   * The name of the environment that the software is running in. Optional.
+   * @var string
+   */
+  private $environmentName = null;
 
   /**
    * Constructs the MigrationManager. This is private
@@ -93,6 +99,14 @@ class Mooduino_Db_Migrations_MigrationManager {
   }
 
   /**
+   * Sets the name of the environment that the software is executing in.
+   * @param string $environmentName
+   */
+  public function setEnvironmentName($environmentName) {
+    $this->environmentName = $environmentName;
+  }
+
+  /**
    * Generates a migration file, using the current timestamp and
    * the given name. The name must be valid.
    * If $baseClass is given, that class name is used as the migration's super
@@ -109,7 +123,7 @@ class Mooduino_Db_Migrations_MigrationManager {
 //    if (function_exists('microtime')) {
 //     $timestamp = preg_replace('/\./', '', microtime(true));
 //    } else {
-      $timestamp = time();
+    $timestamp = time();
 //    }
     $fileName = sprintf('%s/%s_%s.php', $this->directory, $timestamp, $name);
     $fpointer = fopen($fileName, 'w');
@@ -321,6 +335,7 @@ class Mooduino_Db_Migrations_MigrationManager {
     $files = $this->getMigrationFileNames();
     foreach ($files as $count => $file) {
       $metadata = $this->parseFilenameMetadata($file);
+      Zend_Debug::dump($metadata, '$metadata', false);
       if ($metadata['timestamp'] >= $timestamp) {
         $migrations[] = $this->getMigrationFromFile($file, $count + 1);
         if ($limit > 0 && count($migrations) >= $limit) {
@@ -465,7 +480,7 @@ class Mooduino_Db_Migrations_MigrationManager {
     $metadata['class'] = 'Migration_' . substr($filename, 0, strlen($filename) - 4);
     $metadata['realpath'] = realpath($this->directory . '/' . $filename);
     $matches = array();
-    if (preg_match('/^([0-9]+)_([a-zA-Z]+[a-zA-Z0-9]*)\.php/', $filename, &$matches) == 1) {
+    if (preg_match('/^([0-9]+)_([a-zA-Z]+[a-zA-Z0-9\-_]*)\.php/', $filename, &$matches) == 1) {
       $metadata['timestamp'] = intval($matches[1]);
       $metadata['name'] = $matches[2];
     }
@@ -524,22 +539,24 @@ class Mooduino_Db_Migrations_MigrationManager {
       throw new Exception('direction unknown');
     }
     $this->checkSchemaTable();
-    $this->dbAdapter->beginTransaction();
-    try {
-      if ($direction == self::$UP) {
-        $query = $migration->up();
-        $this->dbAdapter->insert('schema_version', array('version' => $migration->getTimestamp()));
-      } elseif ($direction == self::$DOWN) {
-        $query = $migration->down();
-        $this->dbAdapter->delete('schema_version', 'version = ' . $migration->getTimestamp());
+    if (is_null($this->environmentName) || $migration->runsInEnvironment($this->environmentName)) {
+      $this->dbAdapter->beginTransaction();
+      try {
+        if ($direction == self::$UP) {
+          $query = $migration->up();
+          $this->dbAdapter->insert('schema_version', array('version' => $migration->getTimestamp()));
+        } elseif ($direction == self::$DOWN) {
+          $query = $migration->down();
+          $this->dbAdapter->delete('schema_version', 'version = ' . $migration->getTimestamp());
+        }
+        $this->execute($query);
+      } catch (Exception $e) {
+        echo $e->getMessage();
+        $this->dbAdapter->rollBack();
+        throw new Exception('An error occured while executing the migration(s).', $e->getCode(), $e);
       }
-      $this->execute($query);
-    } catch (Exception $e) {
-      echo $e->getMessage();
-      $this->dbAdapter->rollBack();
-      throw new Exception('An error occured while executing the migration(s).', $e->getCode(), $e);
+      $this->dbAdapter->commit();
     }
-    $this->dbAdapter->commit();
   }
 
   /**

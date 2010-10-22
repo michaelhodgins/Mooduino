@@ -190,6 +190,7 @@ class Mooduino_Db_Migrations_MigrationProvider extends Zend_Tool_Project_Provide
       }
     }
     $this->manager = new Mooduino_Db_Migrations_MigrationManager($path, $this->getDbAdapter($env));
+    $this->manager->setEnvironmentName($env);
   }
 
   /**
