@@ -18,7 +18,7 @@
 /**
  * Description of Mooduino_Model_Abstract
  *
- * @author Michael
+ * @author Michael Hodgins
  */
 abstract class Mooduino_Model_Abstract extends Zend_Db_Table_Row_Abstract {
 

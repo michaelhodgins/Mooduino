@@ -24,6 +24,7 @@ class Mooduino_View_Smarty extends Zend_View_Abstract {
         require_once "Smarty.class.php";
 
         $this->_smarty = new Smarty();
+        $this->_smarty->deprecation_notices = false;
         $this->_smarty->template_dir = array($data['template_dir'], $data['layout_dir']);
         $this->_smarty->compile_dir = $data['compile_dir'];
         $this->_smarty->config_dir = $data['config_dir'];
@@ -64,6 +65,8 @@ class Mooduino_View_Smarty extends Zend_View_Abstract {
 
     public function clearVars() {
         $this->_smarty->clear_all_assign();
+        $this->assign('_view', $this);
+        $this->assign('_layout', $this->layout());
     }
 
     public function render($name) {
